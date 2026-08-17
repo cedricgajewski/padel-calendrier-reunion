@@ -31,17 +31,41 @@ const MONTHS = {
   "déc": "12", "dec": "12", "décembre": "12", "decembre": "12"
 };
 
+// Liste des clubs connus — fusion de deux sources :
+// 1) Les clubs déjà vus dans les données de tournois FFT/padelmagazine
+//    (méthode principale, prouvée en production)
+// 2) L'annuaire complet des clubs de padel de La Réunion (AssoPei), pour
+//    ne pas dépendre uniquement de ce qui avait déjà été observé — un club
+//    présent ici mais qui n'a jamais publié de tournoi homologué ne posera
+//    aucun problème, il ne sera simplement jamais matché (ce qui est normal).
 const KNOWN_CLUBS = [
-  "TCM CHAMP-FLEURI", "HANGAR", "ENDEMIK CLUB", "T.C. DIONYSIEN STE CLOTILDE",
-  "TENNIS CLUB DE L OASIS", "TENNIS CLUB DE L'OASIS", "U.S.P.G.SECTION TENNIS",
-  "USPG SECTION TENNIS", "KAZ A PADEL CLUB", "REUNION PADEL CLUB",
-  "PADEL-TENNIS REUNION 4 PADEL"
+  // Nord
+  "HANGAR",
+  "TCM CHAMP-FLEURI", "TENNIS ET PADEL CLUB DE SAINT DENIS", "TENNIS ET PADEL CLUB DE SAINT-DENIS",
+  "SMASH PADEL",
+  // Ouest
+  "REUNION PADEL CLUB",
+  "TENNIS CLUB DE L OASIS", "TENNIS CLUB DE L'OASIS", "OASIS PADEL TENNIS CLUB",
+  "KAZ A PADEL CLUB", "KAZ A PADEL", "KAZ À PADEL",
+  "COCO PADEL",
+  // Sud
+  "PADEL-TENNIS REUNION 4 PADEL", "4PADEL REUNION", "4PADEL RÉUNION",
+  "ENDEMIK CLUB", "ENDEMIK PADEL CLUB",
+  "PADEL PARADISE", "PADEL PARADISE REUNION", "PADEL PARADISE RÉUNION",
+  // Est
+  "BOCAGE PADEL CLUB", "BOCAGE",
+  // Autres clubs vus sur les données FFT, hors annuaire initial
+  "T.C. DIONYSIEN STE CLOTILDE", "USPG SECTION TENNIS", "U.S.P.G.SECTION TENNIS"
 ];
 
 function stripToText(html) {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    // Les icônes (téléphone, adresse, club, arbitre...) portent souvent
+    // leur label dans l'attribut alt — on le réinjecte comme texte avant
+    // de retirer les balises, sinon ce label serait perdu silencieusement.
+    .replace(/<img[^>]*alt="([^"]*)"[^>]*>/gi, "\n$1\n")
     .replace(/<(h1|h2|h3|h4|h5|h6|p|div|li|br|tr)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
     .replace(/&amp;/g, "&")
@@ -62,6 +86,16 @@ const DATE_RE = /(\d{1,2})\s+([a-zéû.]+)\.?\s+(\d{4})/gi;
 // Matches "P25", "P50", "P100" ... "P2000" possibly followed by a label
 const TIER_RE = /\bP(25|50|100|250|500|1000|1500|2000)\b[^\n]{0,60}/i;
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+// Repli générique : la page source affiche souvent un label "Club" (texte
+// ou alt d'icône) juste avant le nom — utile pour capter un club absent
+// de KNOWN_CLUBS sans avoir à mettre ce fichier à jour manuellement.
+const CLUB_LABEL_RE = /^club\s*:?\s*$/i;
+function looksLikeClubName(line) {
+  if (!line || line.length > 80) return false;
+  if (EMAIL_RE.test(line)) return false;
+  if (/^\d/.test(line)) return false; // commence par un chiffre → probablement adresse/téléphone
+  return true;
+}
 
 function parseTournaments(rawHtml) {
   const text = stripToText(rawHtml);
@@ -90,8 +124,21 @@ function parseTournaments(rawHtml) {
     }
 
     if (!current.club) {
+      // 1) Méthode principale (prouvée) : correspondance dans la liste connue
       const found = KNOWN_CLUBS.find(c => line.toUpperCase().includes(c));
       if (found) { current.club = found; continue; }
+
+      // 2) Repli générique : ancrage "Club" → ligne suivante = nom du club
+      if (CLUB_LABEL_RE.test(line)) {
+        for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+          if (looksLikeClubName(lines[j])) {
+            current.club = lines[j].toUpperCase();
+            i = j;
+            break;
+          }
+        }
+        continue;
+      }
     }
 
     if (!current.contact && EMAIL_RE.test(line)) {
