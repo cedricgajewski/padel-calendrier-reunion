@@ -652,13 +652,13 @@ function buildFilters(){
   const clubWrap = document.getElementById('clubFilters');
   clubWrap.innerHTML = '<span class="divider-label">Club</span>';
   const allChip = document.createElement('div');
-  allChip.className = 'chip active';
+  allChip.className = 'chip' + (activeClub === 'all' ? ' active' : '');
   allChip.textContent = 'Tous les clubs';
   allChip.onclick = () => setClub('all', allChip);
   clubWrap.appendChild(allChip);
   clubs.forEach(c=>{
     const chip = document.createElement('div');
-    chip.className = 'chip';
+    chip.className = 'chip' + (activeClub === c ? ' active' : '');
     chip.textContent = c;
     chip.onclick = () => setClub(c, chip);
     clubWrap.appendChild(chip);
@@ -667,13 +667,13 @@ function buildFilters(){
   const tierWrap = document.getElementById('tierFilters');
   tierWrap.innerHTML = '<span class="divider-label">Catégorie</span>';
   const allTierChip = document.createElement('div');
-  allTierChip.className = 'chip active';
+  allTierChip.className = 'chip' + (activeTier === 'all' ? ' active' : '');
   allTierChip.textContent = 'Toutes';
   allTierChip.onclick = () => setTier('all', allTierChip);
   tierWrap.appendChild(allTierChip);
   tiers.forEach(t=>{
     const chip = document.createElement('div');
-    chip.className = 'chip';
+    chip.className = 'chip' + (activeTier === t ? ' active' : '');
     chip.textContent = t;
     chip.onclick = () => setTier(t, chip);
     tierWrap.appendChild(chip);
@@ -690,7 +690,7 @@ function setTier(t, el){
   activeTier = t;
   [...document.getElementById('tierFilters').children].forEach(ch=>ch.classList.remove('active'));
   el.classList.add('active');
-  render();
+  refreshLive(); // re-fetch en direct, puis affiche filtré sur cette catégorie
 }
 
 function render(){
