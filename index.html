@@ -403,94 +403,21 @@
     .controls{padding:18px 5vw;}
     .grid{grid-template-columns:1fr;}
   }
-
-  .export-section{
-    position:relative; z-index:1;
-    margin:0 5vw 32px 5vw;
-    background:rgba(255,255,255,0.02);
-    border:1px solid var(--line);
-    border-radius:12px;
-    padding:20px 22px;
-  }
-  .export-head{
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-    margin-bottom:16px;
-  }
-  .export-title{
-    font-family:'Oswald', sans-serif;
-    text-transform:uppercase; font-weight:600; font-size:16px; letter-spacing:.03em;
-    display:flex; align-items:center; gap:8px;
-  }
-  .export-title::before{content:"📤";}
-  .export-controls{
-    display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px;
-  }
-  .export-select{
-    font-family:'JetBrains Mono', monospace;
-    font-size:12.5px;
-    background:var(--court-deep);
-    color:var(--chalk);
-    border:1px solid var(--line);
-    border-radius:6px;
-    padding:8px 10px;
-    cursor:pointer;
-  }
-  .export-select:focus{outline:none; border-color:var(--ball-dim);}
-  .period-toggle{display:flex; gap:6px; flex-wrap:wrap;}
-  .period-btn{
-    font-family:'JetBrains Mono', monospace;
-    font-size:11.5px; text-transform:uppercase; letter-spacing:.05em;
-    padding:7px 13px;
-    border-radius:999px;
-    border:1px solid var(--line);
-    background:transparent;
-    color:var(--chalk-dim);
-    cursor:pointer;
-  }
-  .period-btn.active{background:var(--ball); border-color:var(--ball); color:var(--court-deep); font-weight:700;}
-  .export-output{
-    width:100%;
-    min-height:220px;
-    background:var(--court-deep);
-    border:1px solid var(--line);
-    border-radius:8px;
-    color:var(--chalk);
-    font-family:'JetBrains Mono', monospace;
-    font-size:12.5px;
-    line-height:1.6;
-    padding:14px 16px;
-    resize:vertical;
-    white-space:pre-wrap;
-  }
-  .export-output:focus{outline:none; border-color:var(--ball-dim);}
-  .export-actions{
-    display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:10px;
-  }
-  .copy-btn{
-    font-family:'JetBrains Mono', monospace;
-    font-size:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:700;
-    background:var(--ball); color:var(--court-deep);
-    border:none; padding:9px 18px; border-radius:999px; cursor:pointer;
-  }
-  .copy-btn.copied{background:var(--tier-p250); color:var(--chalk);}
-  .export-count{
-    font-family:'JetBrains Mono', monospace;
-    font-size:11.5px; color:var(--chalk-dim);
-  }
 </style>
 </head>
 <body>
 <div class="court-lines"></div>
 
 <header>
-  <div class="eyebrow">Ligue Réunion · FFT · Saison 2026 / 2027</div>
+  <div class="eyebrow">Ligue Réunion · FFT</div>
   <h1>Calendrier des <span>tournois</span><br>de padel — La Réunion</h1>
-  <div class="sub">Tournois homologués FFT recensés sur les clubs de l'île, classés par mois. Filtre par club ou par catégorie pour préparer tes inscriptions ou l'organisation de tes propres compétitions.</div>
+  <div class="sub">Clique sur "Actualiser (live)" pour charger les tournois homologués FFT recensés sur les clubs de l'île. Filtre ensuite par club, catégorie, ou période (semaine/mois/semestre/année en cours).</div>
+  <div class="sub" style="margin-top:6px; font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--ball-dim);">Par Cédric GAJEWSKI</div>
 
   <div class="update-bar">
     <div class="update-left">
       <span class="update-dot"></span>
-      <span class="update-text" id="updateText">Dernière recherche : <b>17 août 2026</b> · données figées à cette date</span>
+      <span class="update-text" id="updateText">Aucune donnée chargée · clique sur Actualiser</span>
     </div>
     <div class="btn-row">
       <button class="refresh-btn" id="refreshBtn" onclick="refreshLive()">
@@ -531,24 +458,11 @@
 <div class="controls" style="padding-top:0;">
   <div class="filter-group" id="tierFilters"></div>
 </div>
+<div class="controls" style="padding-top:0;">
+  <div class="filter-group" id="periodFilters"></div>
+</div>
 
 <main>
-  <div class="export-section">
-    <div class="export-head">
-      <div class="export-title">Extraire pour WhatsApp</div>
-      <span class="export-count" id="exportCount"></span>
-    </div>
-    <div class="export-controls">
-      <div class="period-toggle" id="periodToggle"></div>
-      <select class="export-select" id="periodSelect"></select>
-    </div>
-    <textarea class="export-output" id="exportOutput" readonly></textarea>
-    <div class="export-actions">
-      <span class="export-count">Sélectionne une période, puis copie-colle directement dans WhatsApp.</span>
-      <button class="copy-btn" id="copyBtn" onclick="copyExport()">📋 Copier le texte</button>
-    </div>
-  </div>
-
   <div id="calendar"></div>
 
   <div class="unofficial-section">
@@ -624,7 +538,9 @@ const CLUB_SOURCES = {
   "USPG Section Tennis": "https://tournois.padelmagazine.fr/clubs/u-s-p-g-section-tennis"
 };
 
-const tournaments = [
+// Filet de sécurité : utilisé uniquement si le premier live-fetch échoue,
+// jamais affiché tant que "Actualiser (live)" n'a pas été cliqué.
+const STATIC_FALLBACK = [
   {date:"2026-08-18", dateLabel:"18 août 2026", monthKey:"2026-08", monthLabel:"Août 2026", tier:"P50", name:"P50 Mixte", club:"TCM Champ-Fleuri", city:"Saint-Denis", contact:"anrmjive@gmail.com"},
   {date:"2026-08-20", dateLabel:"20 août 2026", monthKey:"2026-08", monthLabel:"Août 2026", tier:"P250", name:"P250 Évolutif Dames & Messieurs", club:"TCM Champ-Fleuri", city:"Saint-Denis", contact:"anrmjive@gmail.com"},
   {date:"2026-08-21", dateLabel:"21 août 2026", monthKey:"2026-08", monthLabel:"Août 2026", tier:"P25", name:"P25 Endemik", club:"Endemik Club", city:"Saint-Louis", contact:"lucaslds@hotmail.fr"},
@@ -635,17 +551,19 @@ const tournaments = [
   {date:"2026-08-29", dateLabel:"29 août 2026", monthKey:"2026-08", monthLabel:"Août 2026", tier:"P100", name:"P100 Mixte", club:"TCM Champ-Fleuri", city:"Saint-Denis", contact:"tpayet03@gmail.com"},
   {date:"2026-08-29b", dateLabel:"29 août 2026", monthKey:"2026-08", monthLabel:"Août 2026", tier:"P25", name:"P25 Mixte", club:"TCM Champ-Fleuri", city:"Saint-Denis", contact:"tpayet03@gmail.com"},
   {date:"2026-08-29c", dateLabel:"29 août 2026", monthKey:"2026-08", monthLabel:"Août 2026", tier:"P100", name:"P100 Hommes & Femmes TCD", club:"T.C. Dionysien Ste-Clotilde", city:"Sainte-Clotilde", contact:"indasky974@gmail.com"},
-
   {date:"2026-09-07", dateLabel:"7 septembre 2026", monthKey:"2026-09", monthLabel:"Septembre 2026", tier:"P250", name:"P250 Journée", club:"Hangar", city:"Sainte-Marie", contact:"baptistemaitre@gmail.com"},
   {date:"2026-09-08", dateLabel:"8 septembre 2026", monthKey:"2026-09", monthLabel:"Septembre 2026", tier:"P100", name:"P100 Hommes", club:"Tennis Club de l'Oasis", city:"Saint-Paul", contact:"legrossabrina974@yahoo.fr"},
   {date:"2026-09-08b", dateLabel:"8 septembre 2026", monthKey:"2026-09", monthLabel:"Septembre 2026", tier:"P250", name:"P250 TCD Hommes", club:"T.C. Dionysien Ste-Clotilde", city:"Sainte-Clotilde", contact:"francoisedoucet974@gmail.com"},
   {date:"2026-09-18", dateLabel:"18 → 20 septembre 2026", monthKey:"2026-09", monthLabel:"Septembre 2026", tier:"P500", name:"P500", club:"Hangar", city:"Sainte-Marie", contact:"fred.ja.beachpadeltennis@gmail.com"},
-
   {date:"2027-01-22", dateLabel:"22 → 24 janvier 2027", monthKey:"2027-01", monthLabel:"Janvier 2027", tier:"P1000", name:"P1000 Hangar", club:"Hangar", city:"Sainte-Marie", contact:"fred.ja.beachpadeltennis@gmail.com"},
-
   {date:"2027-08-13", dateLabel:"13 → 15 août 2027", monthKey:"2027-08", monthLabel:"Août 2027", tier:"P250", name:"P250 OMT", club:"Hangar", city:"Sainte-Marie", contact:"baptistemaitre@gmail.com"},
   {date:"2027-08-14", dateLabel:"14 août 2027", monthKey:"2027-08", monthLabel:"Août 2027", tier:"P50", name:"P50 BHL", club:"USPG Section Tennis", city:"Le Port", contact:"julien-jaj@hotmail.fr"},
 ];
+
+// La page démarre vide — rien ne s'affiche tant que "Actualiser (live)"
+// n'a pas été cliqué au moins une fois.
+const tournaments = [];
+let dataLoaded = false;
 
 const TODAY = new Date("2026-08-17");
 
@@ -661,7 +579,14 @@ function statusFor(t){
   return {label:"À venir", cls:""};
 }
 
-// --- Period helpers -------------------------------------------------
+function getClubs(){ return [...new Set(tournaments.map(t=>t.club))].sort(); }
+const tiers = ["P25","P50","P100","P250","P500","P1000"];
+
+let activeClub = "all";
+let activeTier = "all";
+let activePeriod = "all";
+
+// --- Filtres de période (semaine/mois/semestre/année en cours) --------
 function isoWeek(d){
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const dayNum = (date.getUTCDay() + 6) % 7;
@@ -670,151 +595,56 @@ function isoWeek(d){
   const week = 1 + Math.round(((date - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
   return {year: date.getUTCFullYear(), week};
 }
-function weekRangeLabel(year, week){
-  const jan4 = new Date(Date.UTC(year, 0, 4));
-  const dayNum = (jan4.getUTCDay() + 6) % 7;
-  const monday = new Date(jan4);
-  monday.setUTCDate(jan4.getUTCDate() - dayNum + (week - 1) * 7);
-  const sunday = new Date(monday);
-  sunday.setUTCDate(monday.getUTCDate() + 6);
-  const fmt = (d) => `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`;
-  return `${fmt(monday)} → ${fmt(sunday)}`;
-}
-function quarterOf(month){ return Math.floor(month/3) + 1; }
+function semesterOf(monthIndex){ return monthIndex < 6 ? 1 : 2; }
 
-function periodKeyFor(t, type){
+function isInPeriod(t, period){
+  if (period === 'all') return true;
   const d = cleanDate(t.date);
-  if (type === 'week'){
-    const {year, week} = isoWeek(d);
-    return `${year}-W${String(week).padStart(2,'0')}`;
+  if (period === 'week'){
+    const a = isoWeek(d), b = isoWeek(TODAY);
+    return a.year === b.year && a.week === b.week;
   }
-  if (type === 'month') return t.monthKey;
-  if (type === 'quarter') return `${d.getFullYear()}-Q${quarterOf(d.getMonth())}`;
-  if (type === 'year') return `${d.getFullYear()}`;
-}
-function periodLabelFor(key, type){
-  if (type === 'week'){
-    const [y, w] = key.split('-W');
-    return `Semaine ${w} · ${weekRangeLabel(+y, +w)} (${y})`;
+  if (period === 'month'){
+    return d.getFullYear() === TODAY.getFullYear() && d.getMonth() === TODAY.getMonth();
   }
-  if (type === 'month'){
-    const t = tournaments.find(t2 => t2.monthKey === key);
-    return t ? t.monthLabel : key;
+  if (period === 'semester'){
+    return d.getFullYear() === TODAY.getFullYear() && semesterOf(d.getMonth()) === semesterOf(TODAY.getMonth());
   }
-  if (type === 'quarter'){
-    const [y, q] = key.split('-Q');
-    return `T${q} ${y}`;
+  if (period === 'year'){
+    return d.getFullYear() === TODAY.getFullYear();
   }
-  if (type === 'year') return key;
+  return true;
 }
 
-let currentPeriodType = 'month';
+const PERIOD_OPTIONS = [
+  {id:'all', label:'Tout'},
+  {id:'week', label:'Semaine en cours'},
+  {id:'month', label:'Mois en cours'},
+  {id:'semester', label:'Semestre en cours'},
+  {id:'year', label:'Année en cours'}
+];
 
-function availablePeriods(type){
-  const keys = [...new Set(tournaments.map(t => periodKeyFor(t, type)))];
-  keys.sort();
-  return keys;
-}
-
-function buildPeriodUI(){
-  const toggle = document.getElementById('periodToggle');
-  const types = [
-    {id:'week', label:'Semaine'},
-    {id:'month', label:'Mois'},
-    {id:'quarter', label:'Trimestre'},
-    {id:'year', label:'Année'}
-  ];
-  toggle.innerHTML = '';
-  types.forEach(ty=>{
-    const btn = document.createElement('button');
-    btn.className = 'period-btn' + (ty.id===currentPeriodType ? ' active' : '');
-    btn.textContent = ty.label;
-    btn.onclick = () => { currentPeriodType = ty.id; buildPeriodUI(); };
-    toggle.appendChild(btn);
-  });
-  populatePeriodSelect();
-}
-
-function populatePeriodSelect(){
-  const select = document.getElementById('periodSelect');
-  const periods = availablePeriods(currentPeriodType);
-  select.innerHTML = periods.map(k => `<option value="${k}">${periodLabelFor(k, currentPeriodType)}</option>`).join('');
-  select.onchange = generateExport;
-  generateExport();
-}
-
-const UO_TEXT = `📌 *Hors base FFT (à reconfirmer sur TEN'UP) :*
-• RPC — P1000 (10k€) + P500, ~fin fév/mars, annuel
-• Kaz À Padel — P1000, ~juin, annuel
-• Coco Padel — P25 disputé récemment, club actif
-• BOTC — tournoi interne, octobre, 80+ joueurs
-• LRMT — Interclubs régionaux + Séniors +45 (13-15/03)
-• Padel Paradise — animations, pas de tournoi FFT
-
-🔗 tenup.fft.fr/recherche/tournois`;
-
-function generateExport(){
-  const select = document.getElementById('periodSelect');
-  const key = select.value;
-  if (!key){
-    document.getElementById('exportOutput').value = '';
-    document.getElementById('exportCount').textContent = '';
-    return;
-  }
-  const items = tournaments
-    .filter(t => periodKeyFor(t, currentPeriodType) === key)
-    .sort((a,b) => cleanDate(a.date) - cleanDate(b.date));
-
-  const label = periodLabelFor(key, currentPeriodType);
-  let lines = [];
-  lines.push(`🎾 *TOURNOIS PADEL RÉUNION*`);
-  lines.push(`_${label}_`);
-  lines.push('');
-
-  if (items.length === 0){
-    lines.push('Aucun tournoi homologué recensé sur cette période.');
-  } else {
-    items.forEach(t=>{
-      const bold = (t.tier === 'P500' || t.tier === 'P1000') ? '*' : '';
-      const trophy = t.tier === 'P1000' ? ' 🏆' : '';
-      lines.push(`• ${t.dateLabel.replace(/ \d{4}$/, '')} — ${bold}${t.name}${bold}${trophy} — ${t.club}, ${t.city}`);
-    });
-  }
-
-  // Include the "hors FFT" appendix only for month/quarter/year views (too broad for a single week)
-  if (currentPeriodType !== 'week'){
-    lines.push('');
-    lines.push('---');
-    lines.push(UO_TEXT);
-  }
-
-  document.getElementById('exportOutput').value = lines.join('\n');
-  document.getElementById('exportCount').textContent = `${items.length} tournoi${items.length>1?'s':''} FFT sur cette période`;
-  document.getElementById('copyBtn').classList.remove('copied');
-  document.getElementById('copyBtn').textContent = '📋 Copier le texte';
-}
-
-function copyExport(){
-  const output = document.getElementById('exportOutput');
-  output.select();
-  navigator.clipboard.writeText(output.value).then(()=>{
-    const btn = document.getElementById('copyBtn');
-    btn.classList.add('copied');
-    btn.textContent = '✓ Copié !';
-    setTimeout(()=>{ btn.classList.remove('copied'); btn.textContent='📋 Copier le texte'; }, 2000);
-  }).catch(()=>{
-    document.execCommand('copy');
+function buildPeriodFilters(){
+  const wrap = document.getElementById('periodFilters');
+  wrap.innerHTML = '<span class="divider-label">Période</span>';
+  PERIOD_OPTIONS.forEach(opt=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (opt.id === activePeriod ? ' active' : '');
+    chip.textContent = opt.label;
+    chip.onclick = () => setPeriod(opt.id, chip);
+    wrap.appendChild(chip);
   });
 }
-// ----------------------------------------------------------------------
-
-const clubs = [...new Set(tournaments.map(t=>t.club))].sort();
-const tiers = ["P25","P50","P100","P250","P500","P1000"];
-
-let activeClub = "all";
-let activeTier = "all";
+function setPeriod(p, el){
+  activePeriod = p;
+  [...document.getElementById('periodFilters').children].forEach(ch=>ch.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+// ------------------------------------------------------------------------
 
 function buildFilters(){
+  const clubs = getClubs();
   const clubWrap = document.getElementById('clubFilters');
   clubWrap.innerHTML = '<span class="divider-label">Club</span>';
   const allChip = document.createElement('div');
@@ -863,9 +693,15 @@ function render(){
   const cal = document.getElementById('calendar');
   cal.innerHTML = '';
 
+  if (!dataLoaded){
+    cal.innerHTML = '<div class="empty-state">📭 Aucune donnée chargée.<br><br>Clique sur <b style="color:var(--ball);">"Actualiser (live)"</b> ci-dessus pour afficher les tournois.</div>';
+    return;
+  }
+
   const filtered = tournaments.filter(t =>
     (activeClub === 'all' || t.club === activeClub) &&
-    (activeTier === 'all' || t.tier === activeTier)
+    (activeTier === 'all' || t.tier === activeTier) &&
+    isInPeriod(t, activePeriod)
   );
 
   if (filtered.length === 0){
@@ -927,30 +763,60 @@ function toggleRefreshPanel(){
 
 const CLUB_DISPLAY_NAME = {
   "TCM CHAMP-FLEURI": "TCM Champ-Fleuri",
+  "TENNIS ET PADEL CLUB DE SAINT DENIS": "Tennis et Padel Club de Saint-Denis",
+  "TENNIS ET PADEL CLUB DE SAINT-DENIS": "Tennis et Padel Club de Saint-Denis",
+  "SMASH PADEL": "Smash Padel",
   "HANGAR": "Hangar",
   "ENDEMIK CLUB": "Endemik Club",
+  "ENDEMIK PADEL CLUB": "Endemik Club",
   "T.C. DIONYSIEN STE CLOTILDE": "T.C. Dionysien Ste-Clotilde",
   "TENNIS CLUB DE L OASIS": "Tennis Club de l'Oasis",
   "TENNIS CLUB DE L'OASIS": "Tennis Club de l'Oasis",
+  "OASIS PADEL TENNIS CLUB": "Tennis Club de l'Oasis",
   "U.S.P.G.SECTION TENNIS": "USPG Section Tennis",
   "USPG SECTION TENNIS": "USPG Section Tennis",
   "KAZ A PADEL CLUB": "Kaz A Padel",
+  "KAZ A PADEL": "Kaz A Padel",
+  "KAZ À PADEL": "Kaz A Padel",
   "REUNION PADEL CLUB": "Réunion Padel Club",
-  "PADEL-TENNIS REUNION 4 PADEL": "4Padel Réunion"
+  "PADEL-TENNIS REUNION 4 PADEL": "4Padel Réunion",
+  "4PADEL REUNION": "4Padel Réunion",
+  "4PADEL RÉUNION": "4Padel Réunion",
+  "COCO PADEL": "Coco Padel",
+  "PADEL PARADISE": "Padel Paradise",
+  "PADEL PARADISE REUNION": "Padel Paradise",
+  "PADEL PARADISE RÉUNION": "Padel Paradise",
+  "BOCAGE PADEL CLUB": "Bocage Padel Club",
+  "BOCAGE": "Bocage Padel Club"
 };
 
 const CLUB_CITY = {
   "TCM CHAMP-FLEURI": "Saint-Denis",
+  "TENNIS ET PADEL CLUB DE SAINT DENIS": "Saint-Denis",
+  "TENNIS ET PADEL CLUB DE SAINT-DENIS": "Saint-Denis",
+  "SMASH PADEL": "Saint-Denis",
   "HANGAR": "Sainte-Marie",
   "ENDEMIK CLUB": "Saint-Louis",
+  "ENDEMIK PADEL CLUB": "Saint-Louis",
   "T.C. DIONYSIEN STE CLOTILDE": "Sainte-Clotilde",
   "TENNIS CLUB DE L OASIS": "Saint-Paul",
   "TENNIS CLUB DE L'OASIS": "Saint-Paul",
+  "OASIS PADEL TENNIS CLUB": "Saint-Paul",
   "U.S.P.G.SECTION TENNIS": "Le Port",
   "USPG SECTION TENNIS": "Le Port",
   "KAZ A PADEL CLUB": "La Possession",
+  "KAZ A PADEL": "La Possession",
+  "KAZ À PADEL": "La Possession",
   "REUNION PADEL CLUB": "Saint-Paul",
-  "PADEL-TENNIS REUNION 4 PADEL": "Saint-Louis"
+  "PADEL-TENNIS REUNION 4 PADEL": "Saint-Louis",
+  "4PADEL REUNION": "Saint-Louis",
+  "4PADEL RÉUNION": "Saint-Louis",
+  "COCO PADEL": "Saint-Leu",
+  "PADEL PARADISE": "Saint-Pierre",
+  "PADEL PARADISE REUNION": "Saint-Pierre",
+  "PADEL PARADISE RÉUNION": "Saint-Pierre",
+  "BOCAGE PADEL CLUB": "Sainte-Suzanne",
+  "BOCAGE": "Sainte-Suzanne"
 };
 
 const FR_MONTHS = {
@@ -993,7 +859,9 @@ async function refreshLive(){
     const data = await res.json();
 
     if (!data.ok){
-      showLiveStatus('error', `⚠️ ${data.error || "Échec de la récupération — données figées conservées."}`);
+      loadFallbackIfEmpty();
+      showLiveStatus('error', `⚠️ ${data.error || "Échec de la récupération."}${tournaments.length ? ' Données de secours affichées.' : ''}`);
+      render();
       return;
     }
 
@@ -1020,33 +888,46 @@ async function refreshLive(){
     }).filter(Boolean);
 
     if (liveTournaments.length === 0){
-      showLiveStatus('error', '⚠️ Réponse reçue mais aucune date exploitable — données figées conservées.');
+      loadFallbackIfEmpty();
+      showLiveStatus('error', `⚠️ Réponse reçue mais aucune date exploitable.${tournaments.length ? ' Données de secours affichées.' : ''}`);
+      render();
       return;
     }
 
     // Mutation en place pour garder toutes les références existantes valides
     tournaments.length = 0;
     tournaments.push(...liveTournaments);
+    dataLoaded = true;
 
     document.getElementById('updateText').innerHTML =
       `Données <b>live</b> : ${new Date(data.fetchedAt).toLocaleString('fr-FR')} · ${data.count} tournois via padelmagazine`;
 
     buildFilters();
-    buildPeriodUI();
     render();
     showLiveStatus('ok', `✓ ${data.count} tournois récupérés en direct depuis padelmagazine.`);
   } catch (err){
-    showLiveStatus('error', '⚠️ Fonction Netlify injoignable (pas encore déployée, ou hors ligne) — données figées conservées.');
+    loadFallbackIfEmpty();
+    showLiveStatus('error', `⚠️ Fonction Netlify injoignable (pas encore déployée, ou hors ligne).${tournaments.length ? ' Données de secours affichées.' : ''}`);
+    render();
   } finally {
     btn.classList.remove('spinning');
     btn.disabled = false;
     setBtnLabel('Actualiser (live)');
   }
 }
+
+function loadFallbackIfEmpty(){
+  if (tournaments.length > 0) return; // déjà des données (live précédent ou fallback déjà chargé)
+  tournaments.push(...STATIC_FALLBACK);
+  dataLoaded = true;
+  buildFilters();
+  document.getElementById('updateText').innerHTML =
+    `Données de secours (figées) — le live-fetch a échoué`;
+}
 // ---------------------------------------------------------------------
 
 buildFilters();
-buildPeriodUI();
+buildPeriodFilters();
 render();
 </script>
 </body>
