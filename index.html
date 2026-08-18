@@ -965,6 +965,18 @@ function showLiveStatus(kind, msg){
   setTimeout(()=>{ el.classList.remove('show'); }, 8000);
 }
 
+async function fetchTournamentsEndpoint(){
+  // Essaie d'abord la convention Cloudflare Pages Functions, puis retombe
+  // sur la convention Netlify Functions si la première n'existe pas.
+  // Permet au même fichier de fonctionner sur les deux plateformes sans
+  // avoir à maintenir deux versions séparées de index.html.
+  try {
+    const cf = await fetch('/get-tournaments');
+    if (cf.status !== 404) return cf;
+  } catch (e) { /* réseau indisponible sur cette route, on tente l'autre */ }
+  return fetch('/.netlify/functions/get-tournaments');
+}
+
 async function refreshLive(){
   const btn = document.getElementById('refreshBtn');
   btn.classList.add('spinning');
@@ -972,7 +984,7 @@ async function refreshLive(){
   setBtnLabel('Actualisation…');
 
   try {
-    const res = await fetch('/.netlify/functions/get-tournaments');
+    const res = await fetchTournamentsEndpoint();
     const data = await res.json();
 
     if (!data.ok){
