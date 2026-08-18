@@ -1,0 +1,14 @@
+node_modules
+.git
+.wrangler
+src
+wrangler.jsonc
+package.json
+package-lock.json
+bun.lock
+bun.lockb
+netlify.toml
+netlify
+functions
+.gitignore
+.assetsignore
