@@ -403,6 +403,112 @@
     .controls{padding:18px 5vw;}
     .grid{grid-template-columns:1fr;}
   }
+
+  .info-banner{
+    margin:4px 5vw 18px 5vw;
+    padding:12px 16px;
+    background:rgba(255,255,255,0.02);
+    border:1px solid var(--line);
+    border-radius:8px;
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .info-banner.accent{
+    background:rgba(212,242,76,0.06);
+    border-color:rgba(212,242,76,0.25);
+  }
+  .info-banner .icon{font-size:15px; line-height:1.4; flex:0 0 auto;}
+  .info-banner .text{font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chalk-dim); line-height:1.5;}
+
+  .print-only{display:none;}
+
+  /* ==================== FEUILLE DE STYLE D'IMPRESSION / PDF ==================== */
+  @media print{
+    @page{ margin:14mm; }
+
+    :root{
+      --court: #ffffff;
+      --court-deep: #ffffff;
+      --line: #d8dde0;
+      --chalk: #17242e;
+      --chalk-dim: #55676f;
+      --ball: #5a7a12;
+      --ball-dim: #4c6810;
+      --clay: #b8542a;
+      --tier-p25: #46606c;
+      --tier-p50: #14647f;
+      --tier-p100: #14647f;
+      --tier-p250: #157e5e;
+      --tier-p500: #b8650c;
+      --tier-p1000: #b32548;
+    }
+
+    body{ background:#fff !important; }
+    .court-lines{ display:none !important; }
+    .eyebrow::before{ box-shadow:none !important; }
+
+    /* Éléments interactifs / non pertinents sur papier */
+    .update-bar .btn-row,
+    .live-status,
+    .refresh-panel,
+    .controls,
+    .info-banner,
+    .card-foot-row2,
+    footer a{ display:none !important; }
+
+    .print-only{ display:block !important; }
+    #printFilterSummary{
+      font-family:'JetBrains Mono', monospace;
+      font-size:12px;
+      color:var(--chalk-dim);
+      margin:0 0 18px 0;
+      padding-bottom:12px;
+      border-bottom:1px solid var(--line);
+    }
+    #printFilterSummary b{ color:var(--chalk); }
+
+    header{ padding:0 0 14px 0; border-bottom:2px solid var(--chalk); margin-bottom:10px; }
+    h1{ font-size:26px; }
+    .sub{ font-size:12.5px; }
+
+    .update-bar{
+      border:none; background:none; padding:0; margin-top:10px;
+      display:flex; justify-content:flex-start;
+    }
+    .update-text{ font-size:11.5px; }
+
+    main{ padding:0; }
+
+    .month-block{ break-inside:avoid-page; margin-bottom:24px; }
+    .month-head{ break-after:avoid; border-bottom-color:var(--chalk); }
+
+    .grid{ grid-template-columns:repeat(2, 1fr); gap:10px; }
+
+    .card{
+      break-inside:avoid;
+      background:#fff !important;
+      border:1px solid var(--line) !important;
+      box-shadow:none !important;
+    }
+    .card:hover{ transform:none; }
+    .tier{
+      background:#fff !important;
+      border:1.3px solid var(--tier-color) !important;
+      color:var(--tier-color) !important;
+    }
+    .date-badge{ background:#f4f6f7 !important; border-color:var(--line) !important; color:var(--chalk) !important; }
+    .status{ color:var(--chalk-dim) !important; }
+    .status.soon{ color:var(--clay) !important; }
+    .live-tag{ border-color:var(--tier-p250) !important; color:var(--tier-p250) !important; background:#fff !important; }
+
+    .unofficial-section{ break-before:page; }
+    .uo-card{ break-inside:avoid; background:#fff !important; border-color:var(--line) !important; }
+    .uo-card b{ color:var(--chalk) !important; }
+
+    footer{ margin-top:24px; padding-top:12px; border-top:1px solid var(--line); color:var(--chalk-dim) !important; }
+  }
+  /* =============================================================================== */
 </style>
 </head>
 <body>
@@ -425,6 +531,7 @@
         <span class="refresh-label">Actualiser (live)</span>
       </button>
       <button class="secondary-btn" onclick="toggleRefreshPanel()">ⓘ Sources</button>
+      <button class="secondary-btn" onclick="exportPdf()">📄 Exporter en PDF</button>
     </div>
   </div>
   <div class="live-status" id="liveStatus"></div>
@@ -455,9 +562,9 @@
 <div class="controls">
   <div class="filter-group" id="clubFilters"></div>
 </div>
-<div style="margin:4px 5vw 18px 5vw; padding:12px 16px; background:rgba(212,242,76,0.06); border:1px solid rgba(212,242,76,0.25); border-radius:8px; display:flex; align-items:flex-start; gap:10px;">
-  <span style="font-size:15px; line-height:1.4;">💡</span>
-  <span style="font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chalk-dim); line-height:1.5;">Seuls les clubs ayant une compétition en cours apparaissent ici — les autres s'ajouteront automatiquement dès qu'ils publieront un tournoi.</span>
+<div class="info-banner accent">
+  <span class="icon">💡</span>
+  <span class="text">Seuls les clubs ayant une compétition en cours apparaissent ici — les autres s'ajouteront automatiquement dès qu'ils publieront un tournoi.</span>
 </div>
 <div class="controls" style="padding-top:0;">
   <div class="filter-group" id="tierFilters"></div>
@@ -465,8 +572,13 @@
 <div class="controls" style="padding-top:0;">
   <div class="filter-group" id="periodFilters"></div>
 </div>
+<div class="info-banner">
+  <span class="icon">ℹ️</span>
+  <span class="text">Les filtres club/catégorie/période s'appliquent instantanément sur les données déjà chargées. Pour des données fraîches, reclique sur "Actualiser (live)".</span>
+</div>
 
 <main>
+  <div id="printFilterSummary" class="print-only"></div>
   <div id="calendar"></div>
 
   <div class="unofficial-section">
@@ -690,12 +802,13 @@ function setTier(t, el){
   activeTier = t;
   [...document.getElementById('tierFilters').children].forEach(ch=>ch.classList.remove('active'));
   el.classList.add('active');
-  refreshLive(); // re-fetch en direct, puis affiche filtré sur cette catégorie
+  render();
 }
 
 function render(){
   const cal = document.getElementById('calendar');
   cal.innerHTML = '';
+  updatePrintSummary();
 
   if (!dataLoaded){
     cal.innerHTML = '<div class="empty-state">📭 Aucune donnée chargée.<br><br>Clique sur <b style="color:var(--ball);">"Actualiser (live)"</b> ci-dessus pour afficher les tournois.</div>';
@@ -927,6 +1040,29 @@ function loadFallbackIfEmpty(){
   buildFilters();
   document.getElementById('updateText').innerHTML =
     `Données de secours (figées) — le live-fetch a échoué`;
+}
+// ---------------------------------------------------------------------
+
+// ---------------------------------------------------------------------
+// Export PDF — via l'impression navigateur (aucune dépendance externe)
+// ---------------------------------------------------------------------
+function updatePrintSummary(){
+  const el = document.getElementById('printFilterSummary');
+  if (!el) return;
+  const clubLabel = activeClub === 'all' ? 'Tous' : activeClub;
+  const tierLabel = activeTier === 'all' ? 'Toutes' : activeTier;
+  const periodLabel = (PERIOD_OPTIONS.find(p => p.id === activePeriod) || {}).label || 'Tout';
+  const now = new Date().toLocaleString('fr-FR');
+  el.innerHTML = `Document généré le <b>${now}</b> · Club : <b>${clubLabel}</b> · Catégorie : <b>${tierLabel}</b> · Période : <b>${periodLabel}</b>`;
+}
+
+function exportPdf(){
+  if (!dataLoaded){
+    showLiveStatus('error', "⚠️ Charge d'abord les données avec Actualiser (live) avant d'exporter.");
+    return;
+  }
+  updatePrintSummary();
+  window.print();
 }
 // ---------------------------------------------------------------------
 
