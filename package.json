@@ -2,5 +2,13 @@
   "name": "padel-calendrier-reunion",
   "version": "1.0.0",
   "private": true,
-  "description": "Calendrier des tournois de padel a La Reunion, avec fonction Netlify de mise a jour depuis padelmagazine.fr"
+  "type": "module",
+  "description": "Calendrier des tournois de padel a La Reunion. Deploye sur Cloudflare Workers (src/index.js) et sur Netlify (netlify/functions/).",
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
+  }
 }
